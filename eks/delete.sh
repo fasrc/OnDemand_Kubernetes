@@ -6,7 +6,7 @@
 # Usage:
 #   ./delete.sh CLUSTER_NAME REGION
 # Example
-#  ./delete.sh fas-ood-eks us-east-1
+#  ./delete.sh my-ood-eks us-east-1
 # 
 
 # Number of arguments should be 1
