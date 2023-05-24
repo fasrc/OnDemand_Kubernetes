@@ -1,0 +1,32 @@
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: $NAMESPACE
+  name: deny-from-other-namespaces
+spec:
+  podSelector:
+    matchLabels:
+  ingress:
+  - from:
+    - podSelector: {}
+    - ipBlock:
+        cidr: $NETWORK_POLICY_ALLOW_CIDR
+
+---
+# Based on aws-eks-best-practices issue 84: https://github.com/aws/aws-eks-best-practices/issues/84
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-ec2-meta-data
+  namespace: $NAMESPACE
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 169.254.169.254/32

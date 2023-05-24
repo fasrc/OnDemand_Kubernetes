@@ -1,0 +1,37 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: CLUSTERNAME
+  region: REGION
+
+#managedNodeGroups: <-- not accepted by the warm pool because managedNodeGroups add policies 
+nodeGroups:
+  - name: general-nodegroup
+    instanceType: t2.large
+    #ami: ami-0c909c5081e956d75
+    #overrideBootstrapCommand: |
+    #  #!/bin/bash
+    #  /etc/eks/bootstrap.sh CLUSTERNAME --container-runtime containerd
+    preBootstrapCommands:
+      - mntPoint="/home"; nfs="10.140.70.59:/"; mkdir -p ${mntPoint}; echo ${nfs}$'\t'${mntPoint}$'\t'nfs$'\t'defaults$'\t'0$'\t'0 >> /etc/fstab && mount -a
+      #- for i in 95216 88553; do mntPoint="/n/academic_homes/g_${i}"; nfs="10.31.8.111:/ifs/academic_homes/g_${i}" ; mkdir -p ${mntPoint}; echo ${nfs}$'\t'${mntPoint}$'\t'nfs$'\t'nfsvers=3,rw$'\t'0$'\t'0 >> /etc/fstab ; done && mount -a
+    desiredCapacity: 0
+    privateNetworking: true # if only 'Private' subnets are given, this must be enabled
+    minSize: 0
+    maxSize: 200
+    volumeSize: 30
+    securityGroups:
+      attachIDs: ["SGID"] # given that this list of SGs are created beforehand
+      #attachIDs: ["sg-0fa8f872c4f4ca5f1"] # given that this list of SGs are created beforehand
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+    labels:
+      nodegroup-type: general-node
+      instance-type: onDemand
+      nodegroupname: general
+    ssh:
+      publicKeyName: PUBLICKEYNAME
+      #publicKeyName: eks
+#availabilityZones: ["us-east-1c", "us-east-1d"] <-- Specifying the AZ is not ok because GPUs might not be avaiable in that AZ

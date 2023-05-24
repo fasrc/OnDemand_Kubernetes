@@ -1,0 +1,44 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: CLUSTERNAME
+  region: REGION
+
+nodeGroups:
+  - name: general-nodegroup
+    instanceType: t2.large
+    amiFamily: AmazonLinux2
+    ami: ami-0cb6a986e9aa762f1
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      if [[ $(type -P $(which aws)) ]] && [[ $(type -P $(which jq)) ]] ; then
+        TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+        EC2_ID=$(curl url -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+        RGN=$(curl url -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+        LIFECYCLE=$(aws autoscaling describe-auto-scaling-instances --region $RGN --instance-id $EC2_ID | jq ".AutoScalingInstances[].LifecycleState" || true)
+        if [[ $LIFECYCLE == *"Warmed"* ]]; then
+          rm /var/lib/cloud/instances/$EC2_ID/sem/config_scripts_user
+          exit 0
+        fi
+      fi
+      source /var/lib/cloud/scripts/eksctl/bootstrap.helper.sh
+      /etc/eks/bootstrap.sh ${CLUSTER_NAME} --container-runtime containerd --kubelet-extra-args "--node-labels=${NODE_LABELS}"
+    preBootstrapCommands:
+      - nfsIp=10.31.8.111; fstab_check=$(grep $nfsIp /etc/fstab); if [ "$fstab_check" == "" ]; then for i in g111835; do mntPoint="/n/academic_homes/${i}"; nfs="${nfsIp}:/ifs/academic_homes/${i}"; mkdir -p ${mntPoint}; echo ${nfs}$'\t'${mntPoint}$'\t'nfs$'\t'nfsvers=3,rw$'\t'0$'\t'0 >> /etc/fstab; done; mount -a; fi
+    privateNetworking: true # if only 'Private' subnets are given, this must be enabled
+    desiredCapacity: 0
+    minSize: 0
+    maxSize: 5
+    volumeSize: 50
+    securityGroups:
+      attachIDs: ["SGID"] # given that this list of SGs are created beforehand
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+    labels:
+      nodegroup-type: general-node
+      instance-type: onDemand
+      nodegroupname: general
+    ssh:
+      publicKeyName: PUBLICKEYNAME

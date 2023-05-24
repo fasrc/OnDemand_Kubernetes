@@ -1,0 +1,5 @@
+{
+    "vpc_id": "vpc-0586d783014b5bf49",
+    "subnet_id": "subnet-087fcdb0508c3fa1a",
+    "source_ami": "ami-09acd300cc6d6d17b"
+}

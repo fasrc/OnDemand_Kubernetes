@@ -1,0 +1,36 @@
+---
+# give the service account the ood-initializer role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: "$NAMESPACE"
+  name: "$ONDEMAND_USERNAME-ood-initializer"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "ood-initializer"
+subjects:
+  - kind: ServiceAccount
+    name: "default"
+    namespace: "$NAMESPACE"
+---
+# give the user the ood-user role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: "$NAMESPACE"
+  name: "$ONDEMAND_USERNAME-ood-user"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "ood-user"
+subjects:
+  # Faras changes: Replace the User with Group
+  #- kind: User
+  #  #name: "$ONDEMAND_USERNAME"
+  #  name: "$ORIGINAL_ONDEMAND_USERNAME"
+  #  namespace: "$NAMESPACE"
+  - kind: Group
+    name: "gid:cognito-user-group"
+    namespace: "$NAMESPACE"
+    apiGroup: rbac.authorization.k8s.io

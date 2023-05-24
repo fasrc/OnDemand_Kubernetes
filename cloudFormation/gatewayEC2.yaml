@@ -1,0 +1,256 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: AWS CloudFormation to create EC2 machine.  **WARNING** This template creates an Amazon EC2 instance. You will  be billed for the  AWS resources used if you create a stack from this template.
+# Create an EC2 instance with a Role to access 
+# 	EC2, EKS, Cognito, CloudFormation
+# When the server created, login to the created EC2 as fasuser(if you left the default ADMINUserName)
+#	ssh username@EC2_IP
+# Then be root and install pip
+#	yum install -y python36-pip
+# Then using pip install awscli
+#	pip3 install awscli
+# Then as user fasuser, test awscli and the EC2 role using
+# 	aws ec2 describe-instances --region us-east-1
+
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Admin User"
+        Parameters: 
+          - ADMINUserName
+          - ADMINPublicKey
+      - 
+        Label: 
+          default: "EC2 Spec"
+        Parameters: 
+          - AMI
+          - VPC
+          - Subnet
+          - EC2Type
+          - HostName 
+      - 
+        Label: 
+          default: "Tag Parameters"
+        Parameters: 
+          - TagOwner
+          - TagCreator
+          - TagRsrv
+          - TagOS
+          - TagSnapshot
+          - TagNotes
+
+    ParameterLabels: 
+
+      ADMINUserName: 
+        default: "Admin User Name"
+      ADMINPublicKey:
+        default: "Admin Public Key"
+  
+      AMI:
+        default: "AMI"
+      VPC:
+        default: "VPC where the EC2 and its SG will reside"
+      Subnet:
+        default: "Subnet to host the EC2 that should be on the same VPC"
+      EC2Type:
+        default: "Instance Type"
+      HostName:
+        default: "Hostname"
+
+      TagOwner:
+        default: "Owner/Requester Email"
+      TagCreator:
+        default: "Creator Email"
+      TagRsrv:
+        default: "Years to reserve the instances"
+      TagOS:
+        default: "Operating System"
+      TagSnapshot:
+        default: "EC2 snapshots retention policy"
+      TagNotes:
+        default: "EC2 Notes"
+
+Parameters:
+  
+  ADMINUserName:
+    Type: String
+    Default: fasuser
+  
+  ADMINPublicKey:
+    Description: Public ssh key to be attached to the ADMINUserName
+    Type: String
+    Default: ssh-rsa AAAAB3........ YOUR PUBLIC KEY HERE
+  
+  Subnet:
+    Description: Subnet of the EC2 network (Default to one of the atood-dev subnets)
+    Type: 'AWS::EC2::Subnet::Id'
+    Default: 'subnet-xxxxxxxxxxxxxxxxx'
+    ConstraintDescription: must be a subnet where this machine and its security group reside
+  
+  EC2Type:
+    Description: Computation Power (Memory and CPU)
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+    ConstraintDescription: must be a valid EC2 instance type.
+  
+  AMI:
+    Description: Amazon AMI image (Default to one of the AMI in atood-dev)
+    Type: String
+    Default: ami-xxxxxxxxxxxxxxxxx
+ 
+  VPC:
+    Description: VPC of the Subnet of the EC2 network (Default to atood-dev VPC)
+    Type: AWS::EC2::VPC::Id
+    Default: 'vpc-xxxxxxxxxxxxxxxxx'
+ 
+  HostName:
+    Description: Local host name of the EC2
+    Type: String
+    Default: YOUR DN HERE
+  
+  TagOwner:
+    Description: Optional - Tag the EC2 with the Email of the client who requested the EC2
+    Type: String
+    Default: ''
+  
+  TagCreator:
+    Description: Optional - Tag the EC2 with the Email of the person who create the EC2 using this CF stack (might be the same as the owner)
+    Type: String
+    Default: ''
+  
+  TagNotes:
+    Description: Optional - Tag the EC2 with Extra information related to the functionality of the EC2
+    Type: String
+    Default: ' '
+  
+
+Resources:
+  SSHTOYOURINST:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Sub SG-For-Stack-${AWS::StackName}
+      GroupDescription: SSH access to your institute networks
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: X.X.X.X/X
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: XX.XX.XX.XX/XX
+
+  EC2GWRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: !Sub policy-For-Stack-${AWS::StackName}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "eks:*"
+                  - "ec2:*"
+                  - "autoscaling:*"
+                  - "cloudformation:*"
+                  - "cognito-identity:*"
+                  - "cognito-idp:*"
+                  - "cognito-sync:*"
+                  - "iam:*"
+                  - "ssm:GetParameter"
+                Resource: "*"
+
+  EC2GWInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        -
+          Ref: "EC2GWRole"
+
+  NetworkInterface:
+    Type: 'AWS::EC2::NetworkInterface'
+    DependsOn: SSHTOYOURINST
+    Properties:
+      SubnetId: !Ref Subnet
+      GroupSet:
+        - !Ref SSHTOYOURINST
+
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref EC2Type
+      IamInstanceProfile: !Ref EC2GWInstanceProfile
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref NetworkInterface
+          DeviceIndex: '0'
+      Tags:
+        - 
+          Key: Name
+          Value: !Sub ${AWS::StackName}
+        - 
+          Key: Owner
+          Value: !Ref TagOwner 
+        - 
+          Key: Creator
+          Value: !Ref TagCreator 
+        - 
+          Key: Notes
+          Value: !Ref TagNotes 
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -xe
+              adduser ${ADMINUSERNAME}
+              echo ${ADMINUSERNAME} 'ALL=(ALL) NOPASSWD:ALL'>>/etc/sudoers.d/${ADMINUSERNAME}
+              mkdir /home/${ADMINUSERNAME}/.ssh
+              echo ${ADMINSSHKEY} > /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              chown -R ${ADMINUSERNAME}.${ADMINUSERNAME} /home/${ADMINUSERNAME}/.ssh
+              chmod 700 /home/${ADMINUSERNAME}/.ssh
+              chmod 600 /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              hostnamectl set-hostname  ${HOSTNAME} --pretty
+              hostnamectl set-hostname  ${HOSTNAME} --static
+              hostnamectl set-hostname  ${HOSTNAME} --transient
+              yum install git -y 1>/dev/null 2>/dev/null
+              
+            - ADMINUSERNAME: !Ref ADMINUserName
+              ADMINSSHKEY: !Ref ADMINPublicKey
+              HOSTNAME: !Ref HostName
+
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref EC2Instance
+  PrivateIp:
+    Value:
+      Fn::GetAtt:
+        - EC2Instance
+        - PrivateIp
+    Description: Server's PrivateIp Address
+  Login:
+    Description: Login to the EC2
+    Value:
+      !Join ["", ["ssh ",!Ref ADMINUserName, "@", !GetAtt EC2Instance.PrivateIp ]]
+

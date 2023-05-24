@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: AWS CloudFormation to create EC2 machine.  **WARNING** This template creates an Amazon EC2 instance. You will  be billed for the  AWS resources used if you create a stack from this template.
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Admin User"
+        Parameters: 
+          - ADMINUserName
+          - ADMINPublicKey
+      - 
+        Label: 
+          default: "EC2 Spec"
+        Parameters: 
+          - AMI
+          - Subnet
+          - EC2Type
+          - SecurityGroup
+          - HostName 
+      - 
+        Label: 
+          default: "Tag Parameters"
+        Parameters: 
+          - TagOwner
+          - TagCreator
+          - TagRsrv
+          - TagOS
+          - TagSnapshot
+          - TagNotes
+
+    ParameterLabels: 
+
+      ADMINUserName: 
+        default: "Admin User Name"
+      ADMINPublicKey:
+        default: "Admin Public Key"
+  
+      AMI:
+        default: "AMI"
+      Subnet:
+        default: "Subnet to host the EC2"
+      EC2Type:
+        default: "Instance Type"
+      SecurityGroup:
+        default: "SG of the EC2 (to Havard ?)"
+      HostName:
+        default: "Hostname?"
+
+      TagOwner:
+        default: "Owner/Requester Email"
+      TagCreator:
+        default: "Creator Email"
+      TagRsrv:
+        default: "Years to reserve the instances"
+      TagOS:
+        default: "Operating System"
+      TagSnapshot:
+        default: "EC2 snapshots retention policy"
+      TagNotes:
+        default: "EC2 Notes"
+
+Parameters:
+  
+  ADMINUserName:
+    Description: Username to login, recommend not to change the username.
+    Type: String
+    Default: ooduser
+  
+  ADMINPublicKey:
+    Description: Insert your public key here to login as ooduser.
+    Type: String
+    Default: ssh-rsa AAAA...................
+  
+  Subnet:
+    Description: Subnet to host the EC2s 
+    Type: 'AWS::EC2::Subnet::Id'
+    Default: 'subnet-xxxxxxxxxxxxxxxxx'
+    ConstraintDescription: must be a subnet where this machine reside
+  
+  EC2Type:
+    Description: Computation Power (Memory and CPU)
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+    ConstraintDescription: must be a valid EC2 instance type.
+  
+  AMI:
+    Description: AMI 
+    Type: String
+    Default: ami-xxxxxxxxxxxxxxxxx
+  
+  SecurityGroup:
+    Description: Name of security groups 
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    #Default: 'sg-xxxxxxxxxxxxxxxxx,sg-xxxxxxxxxxxxxxxxx'
+  
+  HostName:
+    Description: What do you want the host name of your EC2 
+    Type: String
+    Default: YOUR DN HERE
+  
+  TagOwner:
+    Description: Requester email 
+    Type: String
+    Default: ''
+  
+  TagCreator:
+    Description: The creator of this machine 
+    Type: String
+    Default: ''
+  
+  TagRsrv:
+    Description: How many years the instance should be reserved
+    Type: Number
+    Default: 0
+  
+  TagOS:
+    Description: OS info 
+    Type: String
+    Default: 'Linux CentOS 7'
+  
+  TagSnapshot:
+    Description: EC2 snapshots retention policy 
+    Type: String
+    Default: 'Default'
+  
+  TagNotes:
+    Description: Info about this instance
+    Type: String
+    Default: ' '
+  
+
+Resources:
+  
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref EC2Type
+      SubnetId: !Ref Subnet
+      SecurityGroupIds: !Ref SecurityGroup
+      DisableApiTermination: false
+      Tags:
+        - 
+          Key: Name
+          Value: !Sub ${AWS::StackName}
+        - 
+          Key: Owner
+          Value: !Ref TagOwner 
+        - 
+          Key: Creator
+          Value: !Ref TagCreator 
+        - 
+          Key: OS
+          Value: !Ref TagOS 
+        - 
+          Key: Snapshot
+          Value: !Ref TagSnapshot
+        - 
+          Key: Rsrv
+          Value: !Ref TagRsrv 
+        - 
+          Key: Notes
+          Value: !Ref TagNotes 
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -xe
+              adduser ${ADMINUSERNAME}
+              echo ${ADMINUSERNAME} 'ALL=(ALL) NOPASSWD:ALL'>>/etc/sudoers.d/${ADMINUSERNAME}
+              mkdir /home/${ADMINUSERNAME}/.ssh
+              echo ${ADMINSSHKEY} > /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              chown -R ${ADMINUSERNAME}.${ADMINUSERNAME} /home/${ADMINUSERNAME}/.ssh
+              chmod 700 /home/${ADMINUSERNAME}/.ssh
+              chmod 600 /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              hostnamectl set-hostname  ${HOSTNAME} --pretty
+              hostnamectl set-hostname  ${HOSTNAME} --static
+              hostnamectl set-hostname  ${HOSTNAME} --transient
+              
+            - ADMINUSERNAME: !Ref ADMINUserName
+              ADMINSSHKEY: !Ref ADMINPublicKey
+              HOSTNAME: !Ref HostName
+
+ 
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref EC2Instance
+  PrivateIp:
+    Value:
+      Fn::GetAtt:
+        - EC2Instance
+        - PrivateIp
+    Description: Server's PrivateIp Address
+

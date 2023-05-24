@@ -1,0 +1,58 @@
+<%
+   pwd_cfg = "c.NotebookApp.password=u\'sha1:${SALT}:${PASSWORD_SHA1}\'"      
+   host_port_cfg = "c.NotebookApp.base_url=\'/node/${HOST_CFG}/${PORT_CFG}/\'"
+
+   configmap_filename = "ondemand_config.py"
+   configmap_data = "c.NotebookApp.port = 8080"
+   utility_img = "harvardat/ood-k8s-utils"
+   user = OodSupport::User.new
+%>
+---
+script:
+  wall_time: "<%= wall_time.to_i * 3600 %>"
+  native:
+    container:
+      name: "jupyter"
+      image: "harvardat/jupyter-tensorflow-pytorch-gpu"
+      image_pull_policy: "IfNotPresent"
+      command: "/usr/local/bin/start.sh /opt/conda/bin/jupyter notebook --config=/ood/ondemand_config.py"
+      working_dir: "<%= Etc.getpwnam(ENV['USER']).dir %>"
+      restart_policy: 'OnFailure'
+      env:
+        NB_UID: "<%= user.uid %>"
+        NB_USER: "<%= user.name %>"
+        NB_GID: "<%= user.group.id %>"
+        HOME: "<%= user.home %>"
+      port: "8080"
+      cpu: "<%= cpu %>"
+      memory: "<%= memory %>Gi"
+      startup_probe:
+        initial_delay_seconds: 40
+        failure_threshold: 10
+        period_seconds: 10
+    configmap:
+      files:
+        - filename: "<%= configmap_filename %>"
+          data: |
+            c.NotebookApp.port = 8080
+            c.NotebookApp.ip = '0.0.0.0'
+            c.NotebookApp.disable_check_xsrf = True
+            c.NotebookApp.allow_origin = '*'
+            c.Application.log_level = 'DEBUG'
+          mount_path: '/ood'
+    mounts:
+      - type: host
+        name: home
+        host_type: Directory
+        #path: "/data/<%= user.name %>"
+        path: <%= user.home %>
+        destination_path: <%= user.home %>
+
+    init_containers:
+    - name: "init-secret"
+      image: "<%= utility_img %>"
+      image_pull_policy: "IfNotPresent"
+      command:
+      - "/bin/bash"
+      - "-c"
+      - "/bin/save_passwd_as_secret; source /bin/passwd_from_secret; source /bin/create_salt_and_sha1; /bin/add_line_to_configmap \\\"<%= pwd_cfg %>\\\" <%= configmap_filename %>; source /bin/find_host_port; /bin/add_line_to_configmap \\\"<%= host_port_cfg %>\\\" <%= configmap_filename %>"

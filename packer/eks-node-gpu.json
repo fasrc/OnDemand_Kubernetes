@@ -1,0 +1,59 @@
+{
+  "variables": {
+    "vpc_id": "",
+    "subnet_id": "",
+    "source_ami": ""
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "us-east-1",
+      "instance_type": "g4dn.xlarge",
+      "associate_public_ip_address": false,
+      "source_ami": "{{user `source_ami`}}",
+      "vpc_id": "{{user `vpc_id`}}",
+      "subnet_id": "{{user `subnet_id`}}",
+      "ami_name": "eks-node-gpu-{{timestamp}}",
+      "tags": {
+        "Name": "eks-node-gpu-{{timestamp}}",
+        "sourceAmi": "{{ .SourceAMI }}",
+        "region": "{{ .BuildRegion }}",
+        "builder": "Packer"
+      },
+      "launch_block_device_mappings": [
+        {
+          "device_name": "/dev/xvda",
+          "volume_size": 50,
+          "volume_type": "gp2",
+          "delete_on_termination": true
+        }
+      ],
+      "ssh_username": "ec2-user"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for cloud-init...'; sleep 2; done"
+      ]
+    },
+    {
+      "type": "shell",
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'",
+      "inline": [
+        "systemctl enable containerd",
+        "systemctl start containerd",
+        "ctr --namespace k8s.io images pull docker.io/harvardat/ood-k8s-utils:latest",
+        "ctr --namespace k8s.io images pull docker.io/harvardat/jupyter-tensorflow-pytorch-gpu:latest"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "packer-output.json",
+      "strip_path": true
+    }
+  ]
+}

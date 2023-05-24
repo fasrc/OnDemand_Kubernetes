@@ -1,0 +1,30 @@
+---
+v2:
+  metadata:
+    title: "CLUSTER_NAME"
+  # you may not want a login section. There may not be a login node
+  # for your kuberenetes cluster
+  login:
+    # Replace host with EKS Host DN
+    host: "EKS_HOST"
+  job:
+    adapter: "kubernetes"
+    # config_file is committed out because tilda is not accepted by kubectl
+    # and because by default it will take $USERHOME/.kube/config
+    #config_file: "~/.kube/config"
+    cluster: KUBE_CLUSTER
+    context: KUBE_CONTEXT
+    bin: "/usr/local/bin/kubectl"
+    username_prefix: ""
+    namespace_prefix: ""
+    all_namespaces: false
+    auto_supplemental_groups: false
+    server:
+      endpoint: "EKS_ENDPOINT"
+      cert_authority_file: "/etc/pki/tls/certs/kubernetes-ca.crt"
+    auth:
+      type: "oidc"
+    mounts: []
+  batch_connect:
+    ssh_allow: false
+

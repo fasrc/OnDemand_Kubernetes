@@ -1,0 +1,30 @@
+---
+cluster:
+  - "k8s_cluster"
+
+form:
+  #- account
+  - cpu
+  - memory
+  - wall_time
+
+attributes:
+  cpu:
+    widget: number_field
+    min: 1
+    max: 4
+    label: "CPUs"
+    required: true
+  memory:
+    widget: number_field
+    #min: 1
+    #max: 12 <-- Low memory permit more than pod on the same GPU instance
+    min: 2
+    max: 16
+    label: "Memory (GB)"
+    required: true
+  wall_time:
+    widget: number_field
+    label: "Hours"
+    min: 1
+    value: 1

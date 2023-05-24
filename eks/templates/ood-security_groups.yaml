@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: AWS CloudFormation Template for the  VPC Security Groups
+# aws cloudformation create-stack --region=us-east-1 --stack-name ood-sg --template-body file:///ood-security_groups.yaml
+# K8S protols based on: https://kubernetes.io/docs/reference/ports-and-protocols/
+Resources:
+  OODTOHARVARD:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: OODSGNAME
+      GroupDescription: SSH and K8S ports open to the scpecified CIDR
+      VpcId:  VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '30000'
+          ToPort: '32767'
+          CidrIp: OODCIDR
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: OODCIDR
+

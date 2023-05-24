@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Cloud Formation template to create simple Cognito Stack with default attributes
+# To deploy using AWSCLI:
+#   aws cloudformation create-stack --region=$REGION   --stack-name ${stackname}   --template-body file://${/PATH/TO/THIS/TEMPLATE}
+#   aws cloudformation create-stack --region=us-east-1 --stack-name ood-cognito-1  --template-body file:///tmp/cognito.yaml
+
+
+Resources:
+
+  # Creates user pool
+  UserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-user-pool
+      MfaConfiguration: "OFF"
+      Policies:
+         PasswordPolicy:
+           MinimumLength: 6
+           RequireLowercase: false
+           RequireNumbers: false
+           RequireSymbols: false
+           RequireUppercase: false
+  
+  # Creates a User Pool Client to be used by the identity pool
+  UserPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-client
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows: 
+        - ADMIN_NO_SRP_AUTH
+  
+  #UserPoolDomain: 
+  #  Type: AWS::Cognito::UserPoolDomain 
+  #  Properties:
+  #    UserPoolId: !Ref UserPool
+  #    Domain: !Sub ${AWS::StackName} #<-- Name should have the reserved word "cognito"
+
+Outputs:
+
+  UserPoolId:
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPool
+
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolClient
+
+  #UserPoolDomain:
+  #  Value: !Join [ "", ["https://", !Ref UserPoolDomain, ".auth.us-east-1.amazoncognito.com" ] ]
+  #  Export:
+  #    Name: !Sub ${AWS::StackName}-UserPoolDomainURL
+
+  UserPoolIssuer:
+    Value: !Join [ "", ["https://cognito-idp.us-east-1.amazonaws.com/", !Ref UserPool ] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolURLIssuer
+

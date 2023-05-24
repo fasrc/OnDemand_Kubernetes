@@ -1,0 +1,27 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: CLUSTERNAME
+  region: REGION
+
+nodeGroups:
+  - name: autoscaler-nodegroup
+    instanceType: t2.small
+    volumeSize: 10
+    volumeType: gp2
+    #securityGroups:
+    #  attachIDs: ["SGID"] # given that this list of SGs are created beforehand
+    privateNetworking: true
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 1
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+    labels:
+      nodegroup-type: autoscaler-node
+      instance-type: onDemand
+      nodegroupname: autoscaler
+    #ssh:
+    #  publicKeyName: PUBLICKEYNAME

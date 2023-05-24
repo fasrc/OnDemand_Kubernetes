@@ -1,0 +1,25 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: CLUSTERNAME
+  region: REGION
+  version: "1.23"
+
+vpc:
+  id: "VPCID"
+  subnets:
+    private:
+      us-east-1a:
+          id: "SUBNETID1"
+      us-east-1b:
+          id: "SUBNETID2"
+  #clusterEndpoints:
+  #  publicAccess:  false
+  #  privateAccess: true
+
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["audit", "authenticator", "scheduler", "api", "controllerManager"]
+    # enableTypes: ["*"]
+#availabilityZones: ["us-east-1a", "us-east-1b"]
