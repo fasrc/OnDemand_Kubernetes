@@ -50,19 +50,19 @@ Where:
 
 Example:
 ```
-deploy.sh fas-ood-eks us-east-1 atood-dev-standard atood-dev-standard-app-pvt-1a atood-dev-standard-app-pvt-1b eks 10.31.0.0/16 ood-cognito-fas general
+deploy.sh my-ood-eks us-east-1 myvpc-tag myvpc-subnet-1-tag myvpc-subnet-2-tag eks 10.31.0.0/16 ood-cognito-1 general
 ```
 
-In this example ```deploy.sh``` will extract the **VPC Id** from **atood-dev-standard** tag name, and the **Subnet Ids** from **atood-dev-standard-app-pvt-1a** and **atood-dev-standard-app-pvt-1b**  tag names.The code will also get the **pool id** and **client pool id** and the **issuer url** from **ood-cognito-fas** cognito stack.\
-Then the code will create a security group and EKS cluster with the name **fas-ood-eks** on the **us-east-1** region on the extracted VPC and the Subnets. The code will associate the extracted cognito attributes (poolid, client id and issuer url) to the EKS cluster for identity management, and it will  create and configure the **autoscaler** and the **autoscaler node group**.
+In this example ```deploy.sh``` will extract the **VPC Id** from **myvpc-tag** tag name, and the **Subnet Ids** from **myvpc-subnet-1-tag** and **myvpc-subnet-2-tag**  tag names.The code will also get the **pool id** and **client pool id** and the **issuer url** from **ood-cognito-1** cognito stack.\
+Then the code will create a security group and EKS cluster with the name **my-ood-eks** on the **us-east-1** region on the extracted VPC and the Subnets. The code will associate the extracted cognito attributes (poolid, client id and issuer url) to the EKS cluster for identity management, and it will  create and configure the **autoscaler** and the **autoscaler node group**.
 
 #### Warmpool
 
 AWS **warmpool** should be configured manually at this stage.\
-To configure the **warmpool** for the above example ```deploy.sh fas-ood-eks ... ```
+To configure the **warmpool** for the above example ```deploy.sh my-ood-eks ... ```
 * Login to AWS
 * EC2 -> Auto Scaling -> Auto Scaling Groups
-* Locate the name of the Nade group created by ```deploy.sh```, name would be something like eksctl-**fas-ood-eks**-nodegroup-**general**-nodegroup-NodeGroup-A0BCD1EFG23H 
+* Locate the name of the Nade group created by ```deploy.sh```, name would be something like eksctl-**my-ood-eks**-nodegroup-**general**-nodegroup-NodeGroup-A0BCD1EFG23H 
 * Instance management -> Warm pool -> Action -> Edit
 * Fill out the parameters -> Save changes
 
@@ -80,10 +80,10 @@ Replace **CLUSTER_NAME** with you EKS cluster name. And that will delete the EKS
 Example:
 
 ```
-delete.sh eks-fas-1
+delete.sh my-ood-eks
 ``` 
 
-if the EKS cluster with the name **eks-fas-1** is available, the script will delete the policies, roles, node group(s) of the **eks-fas-1** cluster then it will delete the **eks-fas-1** itself.
+if the EKS cluster with the name **my-ood-eks** is available, the script will delete the policies, roles, node group(s) of the **my-ood-eks** cluster then it will delete the **my-ood-eks** itself.
 
 #### Warmpool
 
