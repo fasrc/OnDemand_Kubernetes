@@ -1,5 +1,11 @@
 # OnDemand kubernetes
 
+## ISC23 Paper and presentation
+
+[Paper](docs/OpenOnDemandConnectorforAWS.pdf)
+
+[Slides](docs/OpenOnDemandConnectorforAWS.pdf)
+
 ## Deploy EKS and Cognito
 
 #### Prerequisites
