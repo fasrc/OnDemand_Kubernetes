@@ -4,7 +4,7 @@
 
 [Paper](docs/OpenOnDemandConnectorforAWS.pdf)
 
-[Slides](docs/OpenOnDemandConnectorforAWS.pdf)
+[Slides](docs/OpenOnDemandConnector_EKS.pdf)
 
 ## Deploy EKS and Cognito
 
